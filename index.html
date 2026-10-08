@@ -1,0 +1,1622 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f6f7f2">
+    <meta name="description" content="فلوسي: منظّم ميزانية بسيط لتتبع الدخل والمصاريف والتوفير.">
+    <link rel="icon" type="image/svg+xml" href="logo.svg">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="logo.svg">
+    <title>فلوسي — منظّم الميزانية</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --ink: #17231d;
+            --muted: #78847c;
+            --line: #e8ece7;
+            --paper: #ffffff;
+            --canvas: #f6f7f2;
+            --green: #18734c;
+            --green-dark: #125d3d;
+            --green-soft: #e9f5ed;
+            --red: #c8574b;
+            --red-soft: #fff0ed;
+            --shadow: 0 12px 38px rgba(25, 45, 33, .06);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-width: 320px;
+            background: var(--canvas);
+            color: var(--ink);
+            font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+            line-height: 1.5;
+        }
+
+        button, input, select { font: inherit; }
+        button { cursor: pointer; }
+
+        .app-shell { max-width: 1160px; margin: 0 auto; padding: 30px 26px 50px; }
+        .topbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 30px; }
+        .brand { display: flex; align-items: center; gap: 12px; }
+        .brand-mark {
+            display: grid;
+            width: 46px;
+            height: 46px;
+            place-items: center;
+            border-radius: 15px;
+            object-fit: contain;
+        }
+        .brand-name { margin: 0; font-size: 21px; line-height: 1.2; }
+        .brand-caption { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
+        .top-actions { display: flex; align-items: center; gap: 10px; }
+        .header-buttons { display: flex; align-items: center; gap: 9px; }
+        .settings-button { min-height: 44px; padding: 0 13px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); color: var(--ink); font-size: 13px; font-weight: 700; }
+        .settings-button:hover { background: var(--canvas); }
+        .month-switcher { display: flex; align-items: center; gap: 12px; padding: 7px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+        .month-switcher button { width: 29px; height: 29px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font-size: 19px; }
+        .month-switcher button:hover { background: var(--canvas); }
+        #monthLabel { min-width: 110px; text-align: center; font-size: 13px; font-weight: 700; }
+        .primary-button {
+            display: inline-flex;
+            min-height: 44px;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 0 17px;
+            border: 0;
+            border-radius: 12px;
+            background: var(--green);
+            color: white;
+            font-weight: 700;
+            transition: background .2s, transform .2s;
+        }
+        .primary-button:hover { transform: translateY(-1px); background: var(--green-dark); }
+
+        .welcome { margin: 0 0 5px; font-size: 25px; letter-spacing: -.4px; }
+        .subtitle { margin: 0 0 22px; color: var(--muted); font-size: 14px; }
+        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 18px; }
+        .card { border: 1px solid var(--line); border-radius: 18px; background: var(--paper); box-shadow: var(--shadow); }
+        .summary-card { min-height: 145px; padding: 20px 21px; }
+        .card-heading { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 13px; font-weight: 600; }
+        .icon-bubble { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 11px; background: var(--green-soft); font-size: 17px; }
+        .icon-bubble.red { background: var(--red-soft); }
+        .amount { margin: 12px 0 0; font-size: 27px; font-weight: 750; letter-spacing: -.5px; }
+        .amount small { margin-right: 4px; color: var(--muted); font-size: 13px; font-weight: 500; }
+        .amount.positive { color: var(--green); }
+        .amount.negative { color: var(--red); }
+
+        .budget-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px 24px; align-items: center; padding: 21px 23px; margin-bottom: 18px; }
+        .budget-title { margin: 0; font-size: 15px; }
+        .budget-caption { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+        .budget-numbers { color: var(--muted); font-size: 12px; text-align: left; }
+        .budget-numbers strong { color: var(--ink); font-size: 14px; }
+        .budget-progress { grid-column: 1 / -1; height: 9px; overflow: hidden; border-radius: 10px; background: #edf0eb; }
+        .budget-progress span { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--green); transition: width .3s; }
+        .budget-progress span.warning { background: #e7a343; }
+        .budget-progress span.over { background: var(--red); }
+        .budget-footer { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 12px; }
+        .text-button { padding: 3px 0; border: 0; background: transparent; color: var(--green); font-size: 12px; font-weight: 700; }
+
+        .money-tip { display: flex; align-items: flex-start; gap: 13px; padding: 17px 20px; margin-bottom: 18px; border: 1px solid #f0e7ca; border-radius: 16px; background: linear-gradient(110deg, #fff9e9, #fffdf7); }
+        .money-tip-icon { display: grid; width: 38px; height: 38px; flex: 0 0 auto; place-items: center; border-radius: 12px; background: #fff0c7; font-size: 19px; }
+        .money-tip h2 { margin: 0; font-size: 14px; }
+        .money-tip p { margin: 4px 0 0; color: #667064; font-size: 12px; line-height: 1.7; }
+
+        .goals-card { margin-bottom: 18px; overflow: hidden; }
+        .goal-list { display: grid; gap: 12px; padding: 0 21px 20px; }
+        .goal-item { padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: #fcfdfb; }
+        .goal-heading, .goal-details, .goal-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .goal-name { overflow: hidden; margin: 0; font-size: 14px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+        .goal-details { margin: 8px 0; color: var(--muted); font-size: 12px; }
+        .goal-track { height: 8px; overflow: hidden; border-radius: 9px; background: #edf0eb; }
+        .goal-track span { display: block; height: 100%; border-radius: inherit; background: var(--green); transition: width .3s; }
+        .goal-actions { justify-content: flex-start; margin-top: 10px; }
+        .goal-actions .text-button { min-height: 28px; }
+        .goal-delete { padding: 3px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--red); font-size: 12px; }
+        .goal-empty { margin: 0; padding: 0 21px 20px; color: var(--muted); text-align: center; font-size: 12px; }
+
+        .daily-challenge { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px 20px; padding: 20px 22px; margin-bottom: 18px; border: 1px solid #dcecdf; border-radius: 18px; background: linear-gradient(115deg, #f0f8ef, #fff 72%); box-shadow: var(--shadow); }
+        .challenge-heading { display: flex; align-items: center; gap: 10px; }
+        .challenge-coin { display: grid; width: 42px; height: 42px; flex: 0 0 auto; place-items: center; border-radius: 14px; background: #dff0e1; font-size: 22px; }
+        .challenge-heading h2 { margin: 0; font-size: 16px; }
+        .challenge-heading p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
+        .challenge-amount { margin: 14px 0 0; color: var(--green-dark); font-size: 25px; font-weight: 800; }
+        .challenge-amount small { font-size: 13px; font-weight: 700; }
+        .challenge-streak { grid-column: 1; margin: 0; color: var(--muted); font-size: 12px; }
+        .challenge-complete { grid-column: 2; grid-row: 1 / span 3; min-height: 42px; padding: 0 15px; border: 0; border-radius: 11px; background: var(--green); color: white; font-size: 12px; font-weight: 700; transition: transform .2s, background .2s; }
+        .challenge-complete:hover:not(:disabled) { transform: translateY(-1px); background: var(--green-dark); }
+        .challenge-complete:disabled { cursor: default; background: #e5f1e7; color: var(--green-dark); }
+        @media (max-width: 470px) {
+            .daily-challenge { padding: 17px; gap: 10px; }
+            .challenge-heading h2 { font-size: 14px; }
+            .challenge-complete { max-width: 130px; padding: 0 10px; }
+        }
+
+        .trend-card { padding-bottom: 14px; margin-bottom: 18px; }
+        .trend-legend { display: flex; align-items: center; gap: 18px; color: var(--muted); font-size: 12px; }
+        .trend-legend span { display: inline-flex; align-items: center; gap: 7px; }
+        .legend-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); }
+        .legend-dot.expenses { background: var(--red); }
+        .trend-chart-wrap { overflow-x: auto; padding: 0 18px; }
+        .trend-chart { display: block; width: 100%; min-width: 520px; height: auto; overflow: visible; }
+        .trend-grid { stroke: var(--line); stroke-width: 1; }
+        .trend-axis-label, .trend-month-label { fill: var(--muted); font-family: inherit; font-size: 11px; }
+        .trend-line { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+        .trend-line.income { stroke: var(--green); }
+        .trend-line.expenses { stroke: var(--red); }
+        .trend-point.income { fill: var(--green); }
+        .trend-point.expenses { fill: var(--red); }
+        .trend-empty { margin: 0 20px 6px; color: var(--muted); text-align: center; font-size: 12px; }
+
+        .content-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(260px, .8fr); gap: 18px; align-items: start; }
+        .transactions-card, .categories-card { overflow: hidden; }
+        .section-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 21px 14px; }
+        .section-header h2 { margin: 0; font-size: 16px; }
+        .section-header p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
+        .select-filter { max-width: 145px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; background: white; color: var(--ink); font-size: 12px; }
+        .transaction-list { padding: 0 20px; }
+        .transaction {
+            display: grid;
+            grid-template-columns: 42px minmax(0, 1fr) auto auto;
+            align-items: center;
+            gap: 12px;
+            min-height: 68px;
+            border-top: 1px solid var(--line);
+        }
+        .transaction-icon { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 13px; background: var(--canvas); font-size: 18px; }
+        .transaction-title { overflow: hidden; margin: 0; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+        .transaction-meta { margin: 3px 0 0; color: var(--muted); font-size: 11px; }
+        .transaction-amount { direction: ltr; white-space: nowrap; font-size: 13px; font-weight: 700; }
+        .transaction-amount.income { color: var(--green); }
+        .delete-button { width: 30px; height: 30px; border: 0; border-radius: 8px; background: transparent; color: #9aa39c; font-size: 17px; }
+        .delete-button:hover { background: var(--red-soft); color: var(--red); }
+        .empty-state { padding: 35px 15px 42px; color: var(--muted); text-align: center; font-size: 13px; }
+        .empty-state span { display: block; margin-bottom: 9px; font-size: 29px; }
+        .category-list { padding: 2px 21px 20px; }
+        .category-row { margin-top: 17px; }
+        .category-label { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 7px; font-size: 12px; }
+        .category-label span:last-child { color: var(--muted); }
+        .category-track { height: 6px; overflow: hidden; border-radius: 9px; background: #edf0eb; }
+        .category-track span { display: block; height: 100%; border-radius: inherit; background: #5ba77c; }
+        .category-empty { padding: 18px 0 5px; color: var(--muted); text-align: center; font-size: 12px; }
+        .privacy-note { display: flex; justify-content: center; gap: 7px; margin-top: 20px; color: var(--muted); font-size: 11px; }
+
+        .intro-screen {
+            position: fixed;
+            z-index: 20;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            align-content: safe center;
+            padding: 24px;
+            overflow-y: auto;
+            background: radial-gradient(ellipse at 50% 38%, #f0f7ef 0, #f6f7f2 58%, #e9f1e9 100%);
+            opacity: 1;
+            transition: opacity .45s ease, visibility .45s ease;
+        }
+        .intro-screen.is-leaving { visibility: hidden; opacity: 0; }
+        .intro-content { width: min(100%, 330px); text-align: center; }
+        .login-card { width: min(100%, 420px); padding: 30px; border: 1px solid rgba(232, 236, 231, .9); border-radius: 22px; background: var(--paper); box-shadow: 0 24px 70px rgba(25, 45, 33, .12); text-align: start; }
+        .login-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+        .login-brand img { width: 48px; height: 48px; border-radius: 15px; }
+        .login-brand strong { display: block; font-size: 16px; }
+        .login-brand span { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; }
+        .login-title { margin: 0; font-size: 24px; }
+        .login-caption { margin: 6px 0 22px; color: var(--muted); font-size: 13px; }
+        .login-field { display: block; margin-top: 15px; color: #4d5a51; font-size: 12px; font-weight: 700; }
+        .login-field > label { display: block; }
+        .login-field input { width: 100%; min-height: 48px; padding: 0 13px; margin-top: 7px; border: 1px solid var(--line); border-radius: 11px; outline: none; background: white; color: var(--ink); }
+        .login-field input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(24, 115, 76, .1); }
+        .login-password-wrap { position: relative; }
+        .login-password-wrap input { padding-inline-end: 68px; }
+        .password-toggle { position: absolute; inset-inline-end: 8px; bottom: 7px; min-height: 34px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: var(--green); font-size: 11px; font-weight: 700; }
+        .login-submit { width: 100%; min-height: 48px; margin-top: 21px; }
+        .login-notice { margin: 16px 0 0; padding: 11px 12px; border-radius: 10px; background: var(--green-soft); color: var(--green-dark); font-size: 12px; line-height: 1.7; }
+        .login-feedback { margin: 12px 0 0; color: var(--red); font-size: 12px; }
+        .login-guest { display: block; width: 100%; min-height: 43px; margin-top: 13px; border: 1px solid var(--line); border-radius: 11px; background: white; color: var(--ink); font-size: 13px; font-weight: 700; }
+        .login-guest:hover { background: var(--canvas); }
+        .login-back { display: block; margin: 14px auto 0; padding: 5px 8px; border: 0; background: transparent; color: var(--muted); font-size: 12px; }
+        .login-back:hover { color: var(--green); }
+        .intro-mark {
+            display: block;
+            width: 76px;
+            height: 76px;
+            margin: 0 auto 19px;
+            border-radius: 22px;
+            filter: drop-shadow(0 12px 14px rgba(24, 115, 76, .2));
+            animation: intro-bob 1.8s ease-in-out infinite;
+        }
+        .intro-title { margin: 0; font-size: 28px; }
+        .intro-caption { margin: 7px 0 24px; color: var(--muted); font-size: 14px; }
+        .intro-actions { display: flex; justify-content: center; gap: 10px; }
+        .intro-start { min-height: 44px; padding: 0 20px; border: 0; border-radius: 12px; background: var(--green); color: white; font-size: 14px; font-weight: 700; transition: background .2s, transform .2s; }
+        .intro-start:hover { transform: translateY(-1px); background: var(--green-dark); }
+        .intro-start:focus-visible { outline: 3px solid rgba(24, 115, 76, .25); outline-offset: 2px; }
+        .intro-start:disabled { cursor: wait; opacity: .75; }
+        .sound-setting { display: flex; align-items: center; gap: 10px; margin-top: 18px; color: var(--ink); font-size: 13px; font-weight: 600; }
+        .sound-setting input { width: 18px; height: 18px; accent-color: var(--green); }
+        @keyframes intro-bob { 50% { transform: translateY(-5px); } }
+        @media (prefers-reduced-motion: reduce) {
+            .intro-screen { transition: none; }
+            .intro-mark { animation: none; }
+        }
+        @media (max-width: 470px) {
+            .login-card { padding: 24px 20px; }
+            .login-title { font-size: 22px; }
+        }
+
+        .modal-backdrop { position: fixed; z-index: 5; inset: 0; display: none; align-items: center; justify-content: center; padding: 18px; background: rgba(19, 31, 24, .42); }
+        .modal-backdrop.open { display: flex; }
+        .modal { width: min(100%, 440px); padding: 24px; border-radius: 20px; background: white; box-shadow: 0 25px 80px rgba(0,0,0,.18); }
+        .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+        .modal-header h2 { margin: 0; font-size: 19px; }
+        .close-button { width: 34px; height: 34px; border: 0; border-radius: 10px; background: var(--canvas); color: var(--muted); font-size: 20px; }
+        .type-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 4px; margin-bottom: 17px; border-radius: 11px; background: var(--canvas); }
+        .type-switch button { min-height: 38px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 700; }
+        .type-switch button.active { background: white; color: var(--green); box-shadow: 0 2px 7px rgba(0,0,0,.07); }
+        .field { display: block; margin-top: 14px; color: #4d5a51; font-size: 12px; font-weight: 700; }
+        .field input, .field select { width: 100%; min-height: 44px; padding: 0 12px; margin-top: 7px; border: 1px solid var(--line); border-radius: 10px; outline: none; background: white; color: var(--ink); }
+        .field input:focus, .field select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(24,115,76,.1); }
+        .modal-submit { width: 100%; margin-top: 21px; }
+        .budget-dialog-copy { margin: -7px 0 12px; color: var(--muted); font-size: 13px; }
+        .toast { position: fixed; z-index: 10; right: 50%; bottom: 24px; padding: 11px 17px; transform: translateX(50%); border-radius: 11px; background: #17231d; color: white; box-shadow: var(--shadow); font-size: 13px; }
+        [hidden] { display: none !important; }
+
+        @media (max-width: 760px) {
+            .app-shell { padding: 22px 16px 35px; }
+            .topbar { align-items: flex-start; }
+            .top-actions { flex-direction: column-reverse; align-items: stretch; }
+            .header-buttons { justify-content: stretch; }
+            .header-buttons > button { flex: 1; }
+            .month-switcher { justify-content: space-between; }
+            .summary-grid { grid-template-columns: 1fr; gap: 10px; }
+            .summary-card { display: flex; min-height: 98px; align-items: center; justify-content: space-between; padding: 15px 17px; }
+            .summary-card .card-heading { gap: 9px; }
+            .summary-card .amount { margin: 0; font-size: 22px; }
+            .content-grid { grid-template-columns: 1fr; }
+            .budget-card { padding: 18px; }
+            .welcome { font-size: 22px; }
+        }
+        @media (max-width: 470px) {
+            .app-shell { padding-right: 12px; padding-left: 12px; }
+            .brand-caption { font-size: 10px; }
+            .brand-mark { width: 40px; height: 40px; }
+            .brand-name { font-size: 18px; }
+            .topbar { gap: 8px; }
+            .primary-button { min-height: 39px; padding: 0 11px; font-size: 12px; }
+            .month-switcher { gap: 5px; padding: 5px; }
+            #monthLabel { min-width: 92px; font-size: 11px; }
+            .transaction-list { padding: 0 12px; }
+            .transaction { grid-template-columns: 36px minmax(0, 1fr) auto 25px; gap: 8px; }
+            .transaction-icon { width: 35px; height: 35px; }
+            .transaction-amount { font-size: 12px; }
+            .section-header { padding-right: 14px; padding-left: 14px; }
+        }
+    </style>
+</head>
+<body>
+    <section class="intro-screen" id="introScreen" aria-label="مرحبا بك ففلوسي">
+        <div class="intro-content" id="welcomePanel">
+            <img class="intro-mark" src="logo.svg" alt="" aria-hidden="true">
+            <h1 class="intro-title" id="introTitle">مرحبا بك ففلوسي</h1>
+            <p class="intro-caption" id="introCaption">فلوسك واضحة، وراسك مرتاح</p>
+            <div class="intro-actions">
+                <button class="intro-start" id="startExperience" type="button">بدا التجربة　♫</button>
+            </div>
+        </div>
+        <form class="login-card" id="loginForm" hidden>
+            <div class="login-brand">
+                <img src="logo.svg" alt="" aria-hidden="true">
+                <div><strong>فلوسي</strong><span id="loginBrandCaption">فلوسك واضحة، وراسك مرتاح</span></div>
+            </div>
+            <h1 class="login-title" id="loginTitle">مرحبا بعودتك</h1>
+            <p class="login-caption" id="loginCaption">دخل للحساب ديالك باش تتابع فلوسك.</p>
+            <label class="login-field" for="loginEmail"><span id="loginEmailLabel">البريد الإلكتروني</span>
+                <input id="loginEmail" type="email" autocomplete="email" inputmode="email" dir="ltr" placeholder="name@example.com" required>
+            </label>
+            <div class="login-field">
+                <label for="loginPassword"><span id="loginPasswordLabel">كلمة المرور</span></label>
+                <div class="login-password-wrap">
+                    <input id="loginPassword" type="password" autocomplete="current-password" required>
+                    <button class="password-toggle" id="togglePassword" type="button" aria-label="إظهار كلمة المرور">إظهار</button>
+                </div>
+            </div>
+            <p class="login-notice" id="loginNotice">تسجيل الدخول مازال ما مربوطش بخادم. هاد الواجهة ما كتصيفط ولا كتخزن معلومات الدخول.</p>
+            <p class="login-feedback" id="loginFeedback" role="status" hidden></p>
+            <button class="primary-button login-submit" id="loginSubmit" type="submit">دخول</button>
+            <button class="login-guest" id="continueAsGuest" type="button">كمل بلا حساب</button>
+            <button class="login-back" id="backToWelcome" type="button">رجع للبداية</button>
+        </form>
+    </section>
+    <main class="app-shell" id="appShell" hidden>
+        <header class="topbar">
+            <div class="brand" aria-label="فلوسي">
+                <img class="brand-mark" src="logo.svg" alt="" aria-hidden="true">
+                <div>
+                    <p class="brand-name">فلوسي</p>
+                    <p class="brand-caption">فلوسك واضحة، وراسك مرتاح</p>
+                </div>
+            </div>
+            <div class="top-actions">
+                <div class="month-switcher" id="monthSwitcher" aria-label="اختيار الشهر">
+                    <button id="previousMonth" type="button" aria-label="الشهر السابق">›</button>
+                    <span id="monthLabel"></span>
+                    <button id="nextMonth" type="button" aria-label="الشهر التالي">‹</button>
+                </div>
+                <div class="header-buttons">
+                    <button class="settings-button" id="openSettings" type="button">⚙ الإعدادات</button>
+                    <button class="primary-button" id="openTransaction" type="button"><span aria-hidden="true">＋</span> <span id="openTransactionText">زيد عملية</span></button>
+                </div>
+            </div>
+        </header>
+
+        <section aria-labelledby="welcomeTitle">
+            <h1 class="welcome" id="welcomeTitle">السلام! هادي نظرة على فلوسك</h1>
+            <p class="subtitle" id="welcomeSubtitle">تبع الدخل والمصاريف ديالك وخطط للشهر براحة.</p>
+
+            <div class="summary-grid">
+                <article class="card summary-card">
+                    <div class="card-heading"><span class="icon-bubble" aria-hidden="true">◉</span> <span data-summary="balance">الرصيد الصافي</span></div>
+                    <p class="amount" id="balanceAmount">0 <small>د.م.</small></p>
+                </article>
+                <article class="card summary-card">
+                    <div class="card-heading"><span class="icon-bubble" aria-hidden="true">↙</span> <span data-summary="income">مجموع الدخل</span></div>
+                    <p class="amount positive" id="incomeAmount">0 <small>د.م.</small></p>
+                </article>
+                <article class="card summary-card">
+                    <div class="card-heading"><span class="icon-bubble red" aria-hidden="true">↗</span> <span data-summary="expenses">مجموع المصاريف</span></div>
+                    <p class="amount negative" id="expenseAmount">0 <small>د.م.</small></p>
+                </article>
+            </div>
+        </section>
+
+        <section class="card budget-card" aria-labelledby="budgetTitle">
+            <div>
+                <h2 class="budget-title" id="budgetTitle">ميزانية المصاريف الشهرية</h2>
+                <p class="budget-caption" id="budgetCaption">حدد ميزانيتك باش تبقى متحكم فمصاريفك.</p>
+            </div>
+            <div class="budget-numbers"><strong id="budgetSpent">0 د.م.</strong> / <span id="budgetTotal">ما تحدداتش</span></div>
+            <div class="budget-progress" id="budgetProgress" role="progressbar" aria-label="نسبة الميزانية المستعملة" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <span id="budgetBar"></span>
+            </div>
+            <div class="budget-footer">
+                <span id="budgetRemaining">بدا بتحديد ميزانيتك الشهرية.</span>
+                <button class="text-button" id="editBudget" type="button">حدد الميزانية</button>
+            </div>
+        </section>
+
+        <aside class="money-tip" aria-labelledby="moneyTipTitle">
+            <span class="money-tip-icon" aria-hidden="true">💡</span>
+            <div>
+                <h2 id="moneyTipTitle">نصيحة ليك</h2>
+                <p id="moneyTipText" aria-live="polite">سجّل عملياتك باش نعطيوك نصيحة على حساب مصاريفك.</p>
+            </div>
+        </aside>
+
+        <section class="daily-challenge" aria-labelledby="dailyChallengeTitle">
+            <div class="challenge-heading">
+                <span class="challenge-coin" aria-hidden="true">🪙</span>
+                <div>
+                    <h2 id="dailyChallengeTitle">تحدّي التوفير ديال اليوم</h2>
+                    <p id="dailyChallengeCaption">جرّب تحط هاد المبلغ على جنب اليوم.</p>
+                </div>
+            </div>
+            <p class="challenge-amount"><span id="dailyChallengeAmount">10</span> <small id="dailyChallengeCurrency">د.م.</small></p>
+            <p class="challenge-streak" id="dailyChallengeStreak" aria-live="polite">🔥 0 أيام متتابعة</p>
+            <button class="challenge-complete" id="completeDailyChallenge" type="button">درت التحدّي اليوم!</button>
+        </section>
+
+        <section class="card trend-card" aria-labelledby="trendTitle">
+            <div class="section-header">
+                <div>
+                    <h2 id="trendTitle">تطور الدخل والمصاريف</h2>
+                    <p id="trendSubtitle">مقارنة آخر 6 شهور</p>
+                </div>
+                <div class="trend-legend" aria-hidden="true">
+                    <span><i class="legend-dot expenses"></i><span id="trendExpensesLabel">المصاريف</span></span>
+                    <span><i class="legend-dot"></i><span id="trendIncomeLabel">الدخل</span></span>
+                </div>
+            </div>
+            <div class="trend-chart-wrap">
+                <svg class="trend-chart" id="trendChart" viewBox="0 0 720 250" role="img" aria-labelledby="trendTitle trendSubtitle"></svg>
+            </div>
+            <p class="trend-empty" id="trendEmpty" hidden>سجل عملياتك باش يبان ليك تطور المصاريف والدخل.</p>
+        </section>
+
+        <section class="card goals-card" aria-labelledby="goalsTitle">
+            <div class="section-header">
+                <div>
+                    <h2 id="goalsTitle">أهداف التوفير</h2>
+                    <p id="goalsSubtitle">تبع التقدم ديالك نحو أهدافك</p>
+                </div>
+                <button class="primary-button" id="addGoal" type="button">＋ <span id="addGoalText">زيد هدف</span></button>
+            </div>
+            <div class="goal-list" id="goalList"></div>
+            <p class="goal-empty" id="goalEmpty">ما عندك حتى هدف ديال التوفير. زيد هدفك الأول!</p>
+        </section>
+
+        <div class="content-grid">
+            <section class="card transactions-card" aria-labelledby="transactionsTitle">
+                <div class="section-header">
+                    <div>
+                        <h2 id="transactionsTitle">آخر العمليات</h2>
+                        <p id="transactionCount">0 عمليات هاد الشهر</p>
+                    </div>
+                    <select class="select-filter" id="typeFilter" aria-label="تصفية العمليات">
+                        <option value="all">كل العمليات</option>
+                        <option value="expense">المصاريف</option>
+                        <option value="income">الدخل</option>
+                    </select>
+                </div>
+                <div class="transaction-list" id="transactionList"></div>
+            </section>
+
+            <section class="card categories-card" aria-labelledby="categoriesTitle">
+                <div class="section-header">
+                    <div>
+                        <h2 id="categoriesTitle">فين مشاو مصاريفك؟</h2>
+                        <p id="categorySubtitle">التوزيع حسب الصنف</p>
+                    </div>
+                </div>
+                <div class="category-list" id="categoryList"></div>
+            </section>
+        </div>
+        <p class="privacy-note"><span aria-hidden="true">🔒</span><span id="privacyText">بياناتك كتبقى غير فهاد الجهاز.</span></p>
+    </main>
+
+    <div class="modal-backdrop" id="transactionModal" role="dialog" aria-modal="true" aria-labelledby="transactionModalTitle" hidden>
+        <form class="modal" id="transactionForm">
+            <div class="modal-header">
+                <h2 id="transactionModalTitle">زيد عملية جديدة</h2>
+                <button class="close-button" type="button" data-close="transactionModal" aria-label="سد">×</button>
+            </div>
+            <div class="type-switch" id="transactionTypeSwitch" role="group" aria-label="نوع العملية">
+                <button type="button" class="active" data-type="expense">مصروف</button>
+                <button type="button" data-type="income">دخل</button>
+            </div>
+            <input type="hidden" id="transactionType" value="expense">
+            <label class="field"><span id="descriptionLabel">الوصف</span>
+                <input id="description" type="text" maxlength="60" placeholder="مثال: قهوة، خلصة الشهر..." required>
+            </label>
+            <label class="field"><span id="amountLabel">المبلغ بالدرهم</span>
+                <input id="amount" type="number" min="0.01" max="999999999" step="0.01" placeholder="0.00" required>
+            </label>
+            <label class="field" id="categoryField"><span id="categoryLabel">الصنف</span>
+                <select id="category" required>
+                    <option value="الماكلة">الماكلة</option>
+                    <option value="الدار">الدار</option>
+                    <option value="النقل">النقل</option>
+                    <option value="الصحة">الصحة</option>
+                    <option value="التسوق">التسوق</option>
+                    <option value="الفواتير">الفواتير</option>
+                    <option value="الترفيه">الترفيه</option>
+                    <option value="أخرى">أخرى</option>
+                </select>
+            </label>
+            <label class="field"><span id="dateLabel">التاريخ</span>
+                <input id="date" type="date" required>
+            </label>
+            <button class="primary-button modal-submit" id="transactionSubmit" type="submit">حفظ العملية</button>
+        </form>
+    </div>
+
+    <div class="modal-backdrop" id="budgetModal" role="dialog" aria-modal="true" aria-labelledby="budgetModalTitle" hidden>
+        <form class="modal" id="budgetForm">
+            <div class="modal-header">
+                <h2 id="budgetModalTitle">الميزانية الشهرية</h2>
+                <button class="close-button" type="button" data-close="budgetModal" aria-label="سد">×</button>
+            </div>
+            <p class="budget-dialog-copy" id="budgetDialogCopy">دخل شحال باغي تصرف كحد أقصى فهاد الشهر.</p>
+            <label class="field"><span id="budgetInputLabel">الميزانية بالدرهم</span>
+                <input id="budgetInput" type="number" min="0" max="999999999" step="0.01" placeholder="مثال: 3000" required>
+            </label>
+            <button class="primary-button modal-submit" id="budgetSubmit" type="submit">حفظ الميزانية</button>
+        </form>
+    </div>
+
+    <div class="modal-backdrop" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" hidden>
+        <section class="modal">
+            <div class="modal-header">
+                <h2 id="settingsTitle">إعدادات التطبيق</h2>
+                <button class="close-button" type="button" data-close="settingsModal" aria-label="سد">×</button>
+            </div>
+            <label class="field" for="languageSelect"><span id="languageLabel">لغة التطبيق</span>
+                <select id="languageSelect">
+                    <option value="ar">العربية / الدارجة</option>
+                    <option value="fr">Français</option>
+                    <option value="en">English</option>
+                </select>
+            </label>
+            <label class="sound-setting" for="soundToggle">
+                <input id="soundToggle" type="checkbox">
+                <span id="soundLabel">تشغيل أصوات التطبيق</span>
+            </label>
+            <button class="primary-button modal-submit" id="testSound" type="button">جرّب الصوت</button>
+        </section>
+    </div>
+
+    <div class="modal-backdrop" id="goalModal" role="dialog" aria-modal="true" aria-labelledby="goalModalTitle" hidden>
+        <form class="modal" id="goalForm">
+            <div class="modal-header">
+                <h2 id="goalModalTitle">هدف توفير جديد</h2>
+                <button class="close-button" type="button" data-close="goalModal" aria-label="سد">×</button>
+            </div>
+            <label class="field"><span id="goalNameLabel">اسم الهدف</span>
+                <input id="goalName" type="text" maxlength="50" placeholder="مثال: عطلة، حاسوب..." required>
+            </label>
+            <label class="field"><span id="goalTargetLabel">المبلغ اللي باغي تجمع</span>
+                <input id="goalTarget" type="number" min="0.01" max="999999999" step="0.01" placeholder="مثال: 10000" required>
+            </label>
+            <button class="primary-button modal-submit" id="goalSubmit" type="submit">حفظ الهدف</button>
+        </form>
+    </div>
+
+    <div class="modal-backdrop" id="contributionModal" role="dialog" aria-modal="true" aria-labelledby="contributionTitle" hidden>
+        <form class="modal" id="contributionForm">
+            <div class="modal-header">
+                <h2 id="contributionTitle">زيد للتوفير</h2>
+                <button class="close-button" type="button" data-close="contributionModal" aria-label="سد">×</button>
+            </div>
+            <p class="budget-dialog-copy" id="contributionGoalName"></p>
+            <label class="field"><span id="contributionAmountLabel">المبلغ اللي وفرتي</span>
+                <input id="contributionAmount" type="number" min="0.01" max="999999999" step="0.01" placeholder="0.00" required>
+            </label>
+            <button class="primary-button modal-submit" id="contributionSubmit" type="submit">حفظ التوفير</button>
+        </form>
+    </div>
+
+    <script>
+        (() => {
+            const STORAGE_KEY = "flousi-data-v1";
+            const SETTINGS_KEY = "flousi-settings-v1";
+            const translations = {
+                ar: {
+                    brandCaption: "فلوسك واضحة، وراسك مرتاح", introTitle: "مرحبا بك ففلوسي", introCaption: "فلوسك واضحة، وراسك مرتاح",
+                    introStart: "بدا التجربة　♫",
+                    loginTitle: "مرحبا بعودتك", loginCaption: "دخل للحساب ديالك باش تتابع فلوسك.", loginEmail: "البريد الإلكتروني",
+                    loginPassword: "كلمة المرور", showPassword: "إظهار", hidePassword: "إخفاء",
+                    loginNotice: "تسجيل الدخول مازال ما مربوطش بخادم. هاد الواجهة ما كتصيفط ولا كتخزن معلومات الدخول.",
+                    loginFeedback: "تسجيل الدخول مازال ما مفعّلش؛ ما تصيفطات حتى معلومة.", loginSubmit: "دخول",
+                    continueAsGuest: "كمل بلا حساب", backToWelcome: "رجع للبداية",
+                    settings: "⚙ الإعدادات", addTransaction: "زيد عملية", welcome: "السلام! هادي نظرة على فلوسك",
+                    monthSelector: "اختيار الشهر", transactionType: "نوع العملية", budgetProgress: "نسبة الميزانية المستعملة",
+                    trendTitle: "تطور الدخل والمصاريف", trendSubtitle: "مقارنة آخر 6 شهور", trendIncome: "الدخل", trendExpenses: "المصاريف",
+                    trendEmpty: "سجل عملياتك باش يبان ليك تطور المصاريف والدخل.",
+                    goalsTitle: "أهداف التوفير", goalsSubtitle: "تبع التقدم ديالك نحو أهدافك", addGoal: "زيد هدف", goalEmpty: "ما عندك حتى هدف ديال التوفير. زيد هدفك الأول!",
+                    goalModal: "هدف توفير جديد", goalName: "اسم الهدف", goalNamePlaceholder: "مثال: عطلة، حاسوب...", goalTarget: "المبلغ اللي باغي تجمع",
+                    goalTargetPlaceholder: "مثال: 10000", saveGoal: "حفظ الهدف", contribute: "زيد للتوفير", contributionAmount: "المبلغ اللي وفرتي",
+                    saveContribution: "حفظ التوفير", addContribution: "زيد توفير", deleteGoal: "حذف الهدف", goalCompleted: "كملتي الهدف!", goalProgress: "التقدم",
+                    goalInvalid: "دخل اسم ومبلغ صحيحين للهدف.", goalSaved: "تسجل هدف التوفير.", goalDeleted: "تحذف هدف التوفير.",
+                    contributionInvalid: "دخل مبلغ صحيح للتوفير.", contributionTooHigh: "المبلغ أكبر من اللي باقي باش تكمل الهدف.",
+                    contributionSaved: "تسجل التوفير ديالك.", budgetWarning: "تنبيه: وصلتي لـ80% من الميزانية الشهرية.",
+                    budgetExceededAlert: "تنبيه: وصلتي أو فتيتي الميزانية الشهرية!",
+                    moneyTipTitle: "نصيحة ليك", moneyTipStart: "سجّل عملياتك باش نعطيوك نصيحة على حساب مصاريفك.",
+                    moneyTipOverBudget: "تجاوزتي الميزانية الشهرية. راجع المصاريف الجاية وحاول تأجل اللي ماشي ضروري.",
+                    moneyTipNearBudget: "وصلتي لـ{percent}% من الميزانية. راقب المصاريف ديال باقي الشهر.",
+                    moneyTipBalance: "مصاريفك أكثر من الدخل اللي سجلتي. راجع العمليات باش تعرف فين تقدر تنقص.",
+                    moneyTipSetBudget: "مازال ما حددتيش ميزانية للشهر. حددها باش تبقى عارف شحال تقدر تصرف.",
+                    moneyTipCategory: "الصنف اللي فيه أكبر مصاريف هو {category} بـ{percent}% من مجموع مصاريفك. راجع واش تقدر تنقص منو.",
+                    moneyTipSave: "باقي عندك فائض بين الدخل والمصاريف. فكر تخصص جزء منو لهدف توفير.",
+                    dailyChallengeTitle: "تحدّي التوفير ديال اليوم", dailyChallengeCaption: "جرّب تحط هاد المبلغ على جنب اليوم.",
+                    dailyChallengeStreak: "🔥 {count} أيام متتابعة", dailyChallengeButton: "درت التحدّي اليوم!",
+                    dailyChallengeDone: "واعر! كملتي تحدّي اليوم. نكملو غدا! 🎉",
+                    subtitle: "تبع الدخل والمصاريف ديالك وخطط للشهر براحة.", balance: "الرصيد الصافي", income: "مجموع الدخل", expenses: "مجموع المصاريف",
+                    budgetTitle: "ميزانية المصاريف الشهرية", budgetDefault: "حدد ميزانيتك باش تبقى متحكم فمصاريفك.",
+                    budgetNotSet: "ما تحدداتش", budgetSet: "حدد الميزانية", budgetChange: "بدل الميزانية",
+                    budgetUsed: "استعملتي {percent}% من الميزانية ديالك.", budgetRemaining: "باقي ليك {amount}", budgetOver: "فتيتي الميزانية بـ {amount}",
+                    startBudget: "بدا بتحديد ميزانيتك الشهرية.", transactions: "آخر العمليات", transactionCountOne: "{count} عملية هاد الشهر", transactionCountMany: "{count} عمليات هاد الشهر",
+                    filterLabel: "تصفية العمليات", filterAll: "كل العمليات", filterExpenses: "المصاريف", filterIncome: "الدخل",
+                    categoriesTitle: "فين مشاو مصاريفك؟", categoriesSubtitle: "التوزيع حسب الصنف", emptyFilter: "ما كايناش عمليات بهاد التصفية.",
+                    emptyTransactions: "مازال ما زدتي حتى عملية. بدا وسجل أول مصروف أو دخل.", emptyCategories: "التصنيفات غادي يبانوا ملي تسجل المصاريف.",
+                    privacy: "بياناتك كتبقى غير فهاد الجهاز.", transactionModal: "زيد عملية جديدة", close: "سد", expense: "مصروف", incomeType: "دخل",
+                    description: "الوصف", descriptionPlaceholder: "مثال: قهوة، خلصة الشهر...", amount: "المبلغ بالدرهم", category: "الصنف", date: "التاريخ",
+                    saveTransaction: "حفظ العملية", budgetModal: "الميزانية الشهرية", budgetCopy: "دخل شحال باغي تصرف كحد أقصى فهاد الشهر.",
+                    budgetInput: "الميزانية بالدرهم", budgetPlaceholder: "مثال: 3000", saveBudget: "حفظ الميزانية",
+                    settingsTitle: "إعدادات التطبيق", language: "لغة التطبيق", sound: "تشغيل أصوات التطبيق", testSound: "جرّب الصوت",
+                    languageSaved: "تحفظات اللغة ديالك.", soundSaved: "تحفظات إعدادات الصوت.", transactionInvalid: "دخل معلومات صحيحة للعملية.",
+                    transactionSaved: "تسجلات العملية بنجاح.", budgetInvalid: "دخل ميزانية صحيحة أكبر من صفر.", budgetSaved: "تحفظات الميزانية ديالك.",
+                    storageFailed: "ما قدرناش نحفظو البيانات. تأكد من مساحة التخزين.", settingsFailed: "ما قدرناش نحفظو الإعدادات.",
+                    audioUnsupported: "المتصفح ديالك ما كيدعمش الصوت.", audioFailed: "ما قدرناش نشغلو الصوت. جرب مرة أخرى.",
+                    deleteTransaction: "حذف العملية: {description}", categoryFood: "الماكلة", categoryHome: "الدار", categoryTransport: "النقل",
+                    categoryHealth: "الصحة", categoryShopping: "التسوق", categoryBills: "الفواتير", categoryFun: "الترفيه", categoryOther: "أخرى"
+                },
+                fr: {
+                    brandCaption: "Votre argent en toute clarté, l’esprit tranquille", introTitle: "Bienvenue sur Flousi", introCaption: "Votre argent en toute clarté, l’esprit tranquille",
+                    introStart: "Commencer　♫",
+                    loginTitle: "Ravi de vous revoir", loginCaption: "Connectez-vous pour suivre vos finances.", loginEmail: "Adresse e-mail",
+                    loginPassword: "Mot de passe", showPassword: "Afficher", hidePassword: "Masquer",
+                    loginNotice: "La connexion n’est pas encore reliée à un serveur. Ce formulaire n’envoie ni n’enregistre vos identifiants.",
+                    loginFeedback: "La connexion n’est pas encore activée ; aucune information n’a été envoyée.", loginSubmit: "Se connecter",
+                    continueAsGuest: "Continuer sans compte", backToWelcome: "Retour à l’accueil",
+                    settings: "⚙ Paramètres", addTransaction: "Ajouter une opération", welcome: "Bonjour ! Voici un aperçu de vos finances",
+                    monthSelector: "Choisir le mois", transactionType: "Type d’opération", budgetProgress: "Pourcentage du budget utilisé",
+                    trendTitle: "Évolution des revenus et dépenses", trendSubtitle: "Comparaison des 6 derniers mois", trendIncome: "Revenus", trendExpenses: "Dépenses",
+                    trendEmpty: "Ajoutez des opérations pour voir l’évolution de vos revenus et dépenses.",
+                    goalsTitle: "Objectifs d’épargne", goalsSubtitle: "Suivez votre progression vers vos objectifs", addGoal: "Ajouter un objectif", goalEmpty: "Aucun objectif d’épargne. Créez votre premier objectif !",
+                    goalModal: "Nouvel objectif d’épargne", goalName: "Nom de l’objectif", goalNamePlaceholder: "Ex. : vacances, ordinateur...", goalTarget: "Montant à épargner",
+                    goalTargetPlaceholder: "Ex. : 10000", saveGoal: "Enregistrer l’objectif", contribute: "Ajouter à l’épargne", contributionAmount: "Montant épargné",
+                    saveContribution: "Enregistrer l’épargne", addContribution: "Ajouter une épargne", deleteGoal: "Supprimer l’objectif", goalCompleted: "Objectif atteint !", goalProgress: "Progression",
+                    goalInvalid: "Saisissez un nom et un montant valides.", goalSaved: "Objectif d’épargne enregistré.", goalDeleted: "Objectif supprimé.",
+                    contributionInvalid: "Saisissez un montant valide.", contributionTooHigh: "Le montant dépasse la somme restante pour atteindre l’objectif.",
+                    contributionSaved: "Épargne enregistrée.", budgetWarning: "Attention : vous avez atteint 80 % de votre budget mensuel.",
+                    budgetExceededAlert: "Attention : votre budget mensuel est atteint ou dépassé !",
+                    moneyTipTitle: "Conseil pour vous", moneyTipStart: "Ajoutez vos opérations pour recevoir un conseil adapté à vos dépenses.",
+                    moneyTipOverBudget: "Votre budget mensuel est dépassé. Vérifiez vos prochaines dépenses et reportez celles qui ne sont pas indispensables.",
+                    moneyTipNearBudget: "Vous avez utilisé {percent} % de votre budget. Surveillez les dépenses du reste du mois.",
+                    moneyTipBalance: "Vos dépenses dépassent les revenus enregistrés. Vérifiez vos opérations pour repérer les économies possibles.",
+                    moneyTipSetBudget: "Vous n’avez pas encore défini de budget mensuel. Fixez-en un pour mieux suivre vos dépenses.",
+                    moneyTipCategory: "La catégorie la plus dépensière est « {category} » avec {percent} % de vos dépenses. Voyez si vous pouvez la réduire.",
+                    moneyTipSave: "Vos revenus dépassent vos dépenses enregistrées. Pensez à consacrer une partie de la différence à un objectif d’épargne.",
+                    dailyChallengeTitle: "Défi épargne du jour", dailyChallengeCaption: "Essayez de mettre cette somme de côté aujourd’hui.",
+                    dailyChallengeStreak: "🔥 {count} jours d’affilée", dailyChallengeButton: "Défi du jour accompli !",
+                    dailyChallengeDone: "Bravo ! Défi du jour accompli. À demain ! 🎉",
+                    subtitle: "Suivez vos revenus et dépenses et planifiez votre mois sereinement.", balance: "Solde net", income: "Revenus totaux", expenses: "Dépenses totales",
+                    budgetTitle: "Budget mensuel des dépenses", budgetDefault: "Définissez votre budget pour mieux maîtriser vos dépenses.",
+                    budgetNotSet: "Non défini", budgetSet: "Définir le budget", budgetChange: "Modifier le budget",
+                    budgetUsed: "Vous avez utilisé {percent} % de votre budget.", budgetRemaining: "Il vous reste {amount}", budgetOver: "Budget dépassé de {amount}",
+                    startBudget: "Commencez par définir votre budget mensuel.", transactions: "Dernières opérations", transactionCountOne: "{count} opération ce mois-ci", transactionCountMany: "{count} opérations ce mois-ci",
+                    filterLabel: "Filtrer les opérations", filterAll: "Toutes les opérations", filterExpenses: "Dépenses", filterIncome: "Revenus",
+                    categoriesTitle: "Où va votre argent ?", categoriesSubtitle: "Répartition par catégorie", emptyFilter: "Aucune opération pour ce filtre.",
+                    emptyTransactions: "Aucune opération pour le moment. Ajoutez votre première dépense ou revenu.", emptyCategories: "Les catégories apparaîtront après l’ajout de dépenses.",
+                    privacy: "Vos données restent sur cet appareil.", transactionModal: "Ajouter une opération", close: "Fermer", expense: "Dépense", incomeType: "Revenu",
+                    description: "Description", descriptionPlaceholder: "Ex. : café, salaire...", amount: "Montant en dirhams", category: "Catégorie", date: "Date",
+                    saveTransaction: "Enregistrer l’opération", budgetModal: "Budget mensuel", budgetCopy: "Saisissez le montant maximal à dépenser ce mois-ci.",
+                    budgetInput: "Budget en dirhams", budgetPlaceholder: "Ex. : 3000", saveBudget: "Enregistrer le budget",
+                    settingsTitle: "Paramètres de l’application", language: "Langue de l’application", sound: "Activer les sons de l’application", testSound: "Tester le son",
+                    languageSaved: "Langue enregistrée.", soundSaved: "Préférences audio enregistrées.", transactionInvalid: "Saisissez des informations valides pour l’opération.",
+                    transactionSaved: "Opération enregistrée.", budgetInvalid: "Saisissez un budget valide supérieur à zéro.", budgetSaved: "Budget enregistré.",
+                    storageFailed: "Impossible d’enregistrer les données. Vérifiez l’espace de stockage.", settingsFailed: "Impossible d’enregistrer les paramètres.",
+                    audioUnsupported: "Votre navigateur ne prend pas en charge l’audio.", audioFailed: "Impossible de lire le son. Réessayez.",
+                    deleteTransaction: "Supprimer l’opération : {description}", categoryFood: "Alimentation", categoryHome: "Maison", categoryTransport: "Transport",
+                    categoryHealth: "Santé", categoryShopping: "Achats", categoryBills: "Factures", categoryFun: "Loisirs", categoryOther: "Autre"
+                },
+                en: {
+                    brandCaption: "Your money, clear and under control", introTitle: "Welcome to Flousi", introCaption: "Your money, clear and under control",
+                    introStart: "Start your experience　♫",
+                    loginTitle: "Welcome back", loginCaption: "Sign in to keep track of your money.", loginEmail: "Email address",
+                    loginPassword: "Password", showPassword: "Show", hidePassword: "Hide",
+                    loginNotice: "Sign-in is not connected to a server yet. This form does not send or store login details.",
+                    loginFeedback: "Sign-in is not enabled yet; no information was sent.", loginSubmit: "Sign in",
+                    continueAsGuest: "Continue without an account", backToWelcome: "Back to welcome",
+                    settings: "⚙ Settings", addTransaction: "Add transaction", welcome: "Hello! Here’s an overview of your money",
+                    monthSelector: "Choose month", transactionType: "Transaction type", budgetProgress: "Budget used",
+                    trendTitle: "Income and expense trends", trendSubtitle: "Compare the last 6 months", trendIncome: "Income", trendExpenses: "Expenses",
+                    trendEmpty: "Add transactions to see your income and expense trends.",
+                    goalsTitle: "Savings goals", goalsSubtitle: "Track your progress toward your goals", addGoal: "Add a goal", goalEmpty: "No savings goals yet. Create your first goal!",
+                    goalModal: "New savings goal", goalName: "Goal name", goalNamePlaceholder: "e.g. vacation, laptop...", goalTarget: "Amount to save",
+                    goalTargetPlaceholder: "e.g. 10000", saveGoal: "Save goal", contribute: "Add to savings", contributionAmount: "Amount saved",
+                    saveContribution: "Save contribution", addContribution: "Add savings", deleteGoal: "Delete goal", goalCompleted: "Goal reached!", goalProgress: "Progress",
+                    goalInvalid: "Enter a valid goal name and target amount.", goalSaved: "Savings goal saved.", goalDeleted: "Savings goal deleted.",
+                    contributionInvalid: "Enter a valid savings amount.", contributionTooHigh: "That amount is more than the remaining goal balance.",
+                    contributionSaved: "Savings contribution saved.", budgetWarning: "Budget alert: you’ve reached 80% of your monthly budget.",
+                    budgetExceededAlert: "Budget alert: you’ve reached or exceeded your monthly budget!",
+                    moneyTipTitle: "A tip for you", moneyTipStart: "Add transactions to get a tip based on your spending.",
+                    moneyTipOverBudget: "You’re over your monthly budget. Review upcoming expenses and consider postponing non-essentials.",
+                    moneyTipNearBudget: "You’ve used {percent}% of your budget. Keep an eye on spending for the rest of the month.",
+                    moneyTipBalance: "Your recorded expenses are higher than your recorded income. Review your transactions to spot possible savings.",
+                    moneyTipSetBudget: "You haven’t set a monthly budget yet. Set one to keep track of how much you can spend.",
+                    moneyTipCategory: "Your highest-spending category is {category} at {percent}% of your expenses. See if there’s room to cut back.",
+                    moneyTipSave: "Your recorded income is higher than your expenses. Consider putting some of the difference toward a savings goal.",
+                    dailyChallengeTitle: "Today’s savings challenge", dailyChallengeCaption: "Try setting this amount aside today.",
+                    dailyChallengeStreak: "🔥 {count} days in a row", dailyChallengeButton: "I did today’s challenge!",
+                    dailyChallengeDone: "Nice work! Today’s challenge is done. See you tomorrow! 🎉",
+                    subtitle: "Track your income and expenses and plan your month with ease.", balance: "Net balance", income: "Total income", expenses: "Total expenses",
+                    budgetTitle: "Monthly spending budget", budgetDefault: "Set a budget to stay in control of your spending.",
+                    budgetNotSet: "Not set", budgetSet: "Set budget", budgetChange: "Edit budget",
+                    budgetUsed: "You’ve used {percent}% of your budget.", budgetRemaining: "{amount} remaining", budgetOver: "Over budget by {amount}",
+                    startBudget: "Start by setting your monthly budget.", transactions: "Recent transactions", transactionCountOne: "{count} transaction this month", transactionCountMany: "{count} transactions this month",
+                    filterLabel: "Filter transactions", filterAll: "All transactions", filterExpenses: "Expenses", filterIncome: "Income",
+                    categoriesTitle: "Where does your money go?", categoriesSubtitle: "Spending by category", emptyFilter: "No transactions match this filter.",
+                    emptyTransactions: "No transactions yet. Add your first expense or income.", emptyCategories: "Categories will appear when you add expenses.",
+                    privacy: "Your data stays on this device.", transactionModal: "Add a transaction", close: "Close", expense: "Expense", incomeType: "Income",
+                    description: "Description", descriptionPlaceholder: "e.g. coffee, salary...", amount: "Amount in dirhams", category: "Category", date: "Date",
+                    saveTransaction: "Save transaction", budgetModal: "Monthly budget", budgetCopy: "Enter the maximum amount you want to spend this month.",
+                    budgetInput: "Budget in dirhams", budgetPlaceholder: "e.g. 3000", saveBudget: "Save budget",
+                    settingsTitle: "App settings", language: "App language", sound: "Enable app sounds", testSound: "Test sound",
+                    languageSaved: "Language saved.", soundSaved: "Sound preferences saved.", transactionInvalid: "Enter valid transaction details.",
+                    transactionSaved: "Transaction saved.", budgetInvalid: "Enter a valid budget greater than zero.", budgetSaved: "Budget saved.",
+                    storageFailed: "Could not save your data. Check available storage.", settingsFailed: "Could not save settings.",
+                    audioUnsupported: "Your browser does not support audio.", audioFailed: "Could not play the sound. Please try again.",
+                    deleteTransaction: "Delete transaction: {description}", categoryFood: "Food", categoryHome: "Home", categoryTransport: "Transport",
+                    categoryHealth: "Health", categoryShopping: "Shopping", categoryBills: "Bills", categoryFun: "Entertainment", categoryOther: "Other"
+                }
+            };
+            const categoryKeys = {
+                "الماكلة": "categoryFood", "الدار": "categoryHome", "النقل": "categoryTransport", "الصحة": "categoryHealth",
+                "التسوق": "categoryShopping", "الفواتير": "categoryBills", "الترفيه": "categoryFun", "أخرى": "categoryOther", "الدخل": "incomeType"
+            };
+            const categories = {
+                "الماكلة": "🍲", "الدار": "🏠", "النقل": "🚕", "الصحة": "💊",
+                "التسوق": "🛍️", "الفواتير": "💡", "الترفيه": "🎟️", "أخرى": "📦",
+                "الدخل": "💵"
+            };
+            let settings = loadSettings();
+            let language = settings.language;
+            let formatter = new Intl.NumberFormat(language === "ar" ? "ar-MA" : language === "fr" ? "fr-MA" : "en-US", { maximumFractionDigits: 2 });
+            let monthFormatter = new Intl.DateTimeFormat(language === "ar" ? "ar-MA" : language === "fr" ? "fr-MA" : "en-US", { month: "long", year: "numeric" });
+            const today = new Date();
+            let selectedMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            let filterType = "all";
+            let data = loadData();
+            let audioContext;
+            let introFinished = false;
+
+            function loadSettings() {
+                try {
+                    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+                    return {
+                        language: ["ar", "fr", "en"].includes(saved.language) ? saved.language : "ar",
+                        sounds: saved.sounds !== false
+                    };
+                } catch (error) {
+                    console.error("تعذر تحميل إعدادات التطبيق:", error);
+                    return { language: "ar", sounds: true };
+                }
+            }
+
+            function saveSettings() {
+                try {
+                    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+                    return true;
+                } catch (error) {
+                    console.error("تعذر حفظ إعدادات التطبيق:", error);
+                    showToast(t("settingsFailed"));
+                    return false;
+                }
+            }
+
+            function t(key, values) {
+                let text = translations[language][key] || translations.ar[key] || key;
+                if (values) {
+                    Object.entries(values).forEach(([name, value]) => {
+                        text = text.replace("{" + name + "}", String(value));
+                    });
+                }
+                return text;
+            }
+
+            function applyLanguage() {
+                const locale = language === "ar" ? "ar-MA" : language === "fr" ? "fr-MA" : "en-US";
+                document.documentElement.lang = locale;
+                document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
+                document.title = language === "ar" ? "فلوسي — منظّم الميزانية" : language === "fr" ? "Flousi — Budget" : "Flousi — Budget planner";
+                formatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
+                monthFormatter = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" });
+                const textById = {
+                    "introTitle": "introTitle", "introCaption": "introCaption", "startExperience": "introStart",
+                    "loginBrandCaption": "brandCaption", "loginTitle": "loginTitle", "loginCaption": "loginCaption",
+                    "loginEmailLabel": "loginEmail", "loginPasswordLabel": "loginPassword",
+                    "loginNotice": "loginNotice", "loginSubmit": "loginSubmit", "continueAsGuest": "continueAsGuest", "backToWelcome": "backToWelcome",
+                    "welcomeTitle": "welcome", "welcomeSubtitle": "subtitle", "budgetTitle": "budgetTitle", "transactionsTitle": "transactions",
+                    "moneyTipTitle": "moneyTipTitle",
+                    "dailyChallengeTitle": "dailyChallengeTitle", "dailyChallengeCaption": "dailyChallengeCaption",
+                    "trendTitle": "trendTitle", "trendSubtitle": "trendSubtitle", "trendExpensesLabel": "trendExpenses",
+                    "trendIncomeLabel": "trendIncome", "trendEmpty": "trendEmpty",
+                    "goalsTitle": "goalsTitle", "goalsSubtitle": "goalsSubtitle", "addGoalText": "addGoal", "goalEmpty": "goalEmpty",
+                    "goalModalTitle": "goalModal", "goalNameLabel": "goalName", "goalTargetLabel": "goalTarget", "goalSubmit": "saveGoal",
+                    "contributionTitle": "contribute", "contributionAmountLabel": "contributionAmount", "contributionSubmit": "saveContribution",
+                    "categoriesTitle": "categoriesTitle", "categorySubtitle": "categoriesSubtitle", "privacyText": "privacy", "transactionModalTitle": "transactionModal",
+                    "descriptionLabel": "description", "amountLabel": "amount", "categoryLabel": "category", "dateLabel": "date",
+                    "budgetModalTitle": "budgetModal", "budgetDialogCopy": "budgetCopy", "budgetInputLabel": "budgetInput",
+                    "settingsTitle": "settingsTitle", "languageLabel": "language", "soundLabel": "sound", "testSound": "testSound",
+                    "openTransactionText": "addTransaction", "transactionSubmit": "saveTransaction", "budgetSubmit": "saveBudget"
+                };
+                Object.entries(textById).forEach(([id, key]) => {
+                    const element = document.getElementById(id);
+                    if (element) element.textContent = t(key);
+                });
+                const loginPassword = document.getElementById("loginPassword");
+                const passwordToggle = document.getElementById("togglePassword");
+                if (loginPassword && passwordToggle) {
+                    const passwordVisibilityKey = loginPassword.type === "password" ? "showPassword" : "hidePassword";
+                    passwordToggle.textContent = t(passwordVisibilityKey);
+                    passwordToggle.setAttribute("aria-label", t(passwordVisibilityKey));
+                }
+                const loginFeedback = document.getElementById("loginFeedback");
+                if (loginFeedback) loginFeedback.textContent = t("loginFeedback");
+                document.querySelector(".brand-caption").textContent = t("brandCaption");
+                document.getElementById("openSettings").textContent = t("settings");
+                document.getElementById("monthSwitcher").setAttribute("aria-label", t("monthSelector"));
+                document.getElementById("transactionTypeSwitch").setAttribute("aria-label", t("transactionType"));
+                document.getElementById("budgetProgress").setAttribute("aria-label", t("budgetProgress"));
+                document.querySelector("[data-summary='balance']").textContent = t("balance");
+                document.querySelector("[data-summary='income']").textContent = t("income");
+                document.querySelector("[data-summary='expenses']").textContent = t("expenses");
+                document.getElementById("editBudget").textContent = t(data.budgets[monthKey(selectedMonth)] ? "budgetChange" : "budgetSet");
+                document.getElementById("typeFilter").setAttribute("aria-label", t("filterLabel"));
+                document.getElementById("addGoal").setAttribute("aria-label", t("addGoal"));
+                document.querySelector("#typeFilter option[value='all']").textContent = t("filterAll");
+                document.querySelector("#typeFilter option[value='expense']").textContent = t("filterExpenses");
+                document.querySelector("#typeFilter option[value='income']").textContent = t("filterIncome");
+                document.querySelectorAll("#category option").forEach(option => {
+                    option.textContent = t(categoryKeys[option.value] || "categoryOther");
+                });
+                document.querySelector("#transactionForm [data-type='expense']").textContent = t("expense");
+                document.querySelector("#transactionForm [data-type='income']").textContent = t("incomeType");
+                document.querySelector("#description").placeholder = t("descriptionPlaceholder");
+                document.querySelector("#budgetInput").placeholder = t("budgetPlaceholder");
+                document.querySelector("#goalName").placeholder = t("goalNamePlaceholder");
+                document.querySelector("#goalTarget").placeholder = t("goalTargetPlaceholder");
+                document.querySelectorAll("[data-close]").forEach(button => button.setAttribute("aria-label", t("close")));
+                document.getElementById("previousMonth").setAttribute("aria-label", language === "ar" ? "الشهر السابق" : language === "fr" ? "Mois précédent" : "Previous month");
+                document.getElementById("nextMonth").setAttribute("aria-label", language === "ar" ? "الشهر التالي" : language === "fr" ? "Mois suivant" : "Next month");
+                const intro = document.getElementById("introScreen");
+                if (intro) {
+                    intro.setAttribute("aria-label", t("introTitle"));
+                }
+                document.getElementById("soundToggle").checked = settings.sounds;
+                document.getElementById("languageSelect").value = language;
+                document.getElementById("trendChart").setAttribute("aria-label", t("trendTitle") + " — " + t("trendSubtitle"));
+                render();
+            }
+
+            function loadData() {
+                try {
+                    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+                    return {
+                        transactions: Array.isArray(saved.transactions) ? saved.transactions.filter(isValidTransaction) : [],
+                        budgets: saved.budgets && typeof saved.budgets === "object" && !Array.isArray(saved.budgets) ? saved.budgets : {},
+                        goals: Array.isArray(saved.goals) ? saved.goals.filter(isValidGoal) : [],
+                        budgetAlerts: Array.isArray(saved.budgetAlerts) ? saved.budgetAlerts.filter(item => typeof item === "string") : [],
+                        dailyChallenges: Array.isArray(saved.dailyChallenges)
+                            ? [...new Set(saved.dailyChallenges.filter(item => typeof item === "string" && /^\d{4}-\d{2}-\d{2}$/.test(item)))].sort().slice(-365)
+                            : []
+                    };
+                } catch (error) {
+                    console.error("تعذر تحميل البيانات المحفوظة:", error);
+                    return { transactions: [], budgets: {}, goals: [], budgetAlerts: [], dailyChallenges: [] };
+                }
+            }
+
+            function isValidTransaction(item) {
+                return item && typeof item.id === "string" &&
+                    (item.type === "income" || item.type === "expense") &&
+                    typeof item.description === "string" && item.description.trim() &&
+                    Number.isFinite(item.amount) && item.amount > 0 &&
+                    typeof item.category === "string" && /^\d{4}-\d{2}-\d{2}$/.test(item.date);
+            }
+
+            function isValidGoal(goal) {
+                return goal && typeof goal.id === "string" &&
+                    typeof goal.name === "string" && goal.name.trim() &&
+                    Number.isFinite(goal.target) && goal.target > 0 &&
+                    Number.isFinite(goal.saved) && goal.saved >= 0 && goal.saved <= goal.target;
+            }
+
+            function saveData() {
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                    return true;
+                } catch (error) {
+                    console.error("تعذر حفظ البيانات:", error);
+                    showToast(t("storageFailed"));
+                    return false;
+                }
+            }
+
+            function monthKey(date) {
+                return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0");
+            }
+
+            function formatMoney(amount) {
+                const unit = language === "ar" ? "د.م." : "MAD";
+                return formatter.format(amount) + " " + unit;
+            }
+
+            function currencyUnit() {
+                return language === "ar" ? "د.م." : "MAD";
+            }
+
+            function localDateValue(date) {
+                return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
+            }
+
+            function finishIntro() {
+                if (introFinished) return;
+                introFinished = true;
+                const intro = document.getElementById("introScreen");
+                document.getElementById("appShell").hidden = false;
+                intro.classList.add("is-leaving");
+                window.setTimeout(() => intro.remove(), 500);
+            }
+
+            function playWelcomeSound() {
+                const AudioContextClass = window.AudioContext;
+                if (!AudioContextClass) {
+                    showToast(t("audioUnsupported"));
+                    return;
+                }
+
+                try {
+                    audioContext = audioContext || new AudioContextClass();
+                    audioContext.resume().then(() => {
+                        const notes = [523.25, 659.25, 783.99];
+                        const start = audioContext.currentTime;
+                        notes.forEach((frequency, index) => {
+                            const oscillator = audioContext.createOscillator();
+                            const volume = audioContext.createGain();
+                            const noteStart = start + index * 0.16;
+                            oscillator.type = "sine";
+                            oscillator.frequency.setValueAtTime(frequency, noteStart);
+                            volume.gain.setValueAtTime(0.0001, noteStart);
+                            volume.gain.exponentialRampToValueAtTime(0.09, noteStart + 0.04);
+                            volume.gain.exponentialRampToValueAtTime(0.0001, noteStart + 0.42);
+                            oscillator.connect(volume);
+                            volume.connect(audioContext.destination);
+                            oscillator.start(noteStart);
+                            oscillator.stop(noteStart + 0.44);
+                        });
+                    }).catch(error => {
+                        console.error("تعذر تشغيل نغمة الترحيب:", error);
+                        showToast(t("audioFailed"));
+                    });
+                } catch (error) {
+                    console.error("تعذر تشغيل نغمة الترحيب:", error);
+                    showToast(t("audioFailed"));
+                }
+            }
+
+            function playUiSound(kind, force) {
+                if (!force && !settings.sounds) return;
+                const AudioContextClass = window.AudioContext;
+                if (!AudioContextClass) {
+                    if (force) showToast(t("audioUnsupported"));
+                    return;
+                }
+                const patterns = {
+                    success: [659.25, 880],
+                    remove: [493.88, 392],
+                    open: [523.25, 659.25],
+                    close: [659.25, 523.25],
+                    navigate: [587.33],
+                    test: [523.25, 659.25, 783.99]
+                };
+                const notes = patterns[kind] || patterns.open;
+                try {
+                    audioContext = audioContext || new AudioContextClass();
+                    audioContext.resume().then(() => {
+                        const start = audioContext.currentTime;
+                        notes.forEach((frequency, index) => {
+                            const oscillator = audioContext.createOscillator();
+                            const volume = audioContext.createGain();
+                            const noteStart = start + index * 0.12;
+                            oscillator.type = "sine";
+                            oscillator.frequency.setValueAtTime(frequency, noteStart);
+                            volume.gain.setValueAtTime(0.0001, noteStart);
+                            volume.gain.exponentialRampToValueAtTime(0.045, noteStart + 0.025);
+                            volume.gain.exponentialRampToValueAtTime(0.0001, noteStart + 0.22);
+                            oscillator.connect(volume);
+                            volume.connect(audioContext.destination);
+                            oscillator.start(noteStart);
+                            oscillator.stop(noteStart + 0.24);
+                        });
+                    }).catch(error => {
+                        console.error("تعذر تشغيل صوت التطبيق:", error);
+                        if (force) showToast(t("audioFailed"));
+                    });
+                } catch (error) {
+                    console.error("تعذر تشغيل صوت التطبيق:", error);
+                    if (force) showToast(t("audioFailed"));
+                }
+            }
+
+            function visibleTransactions() {
+                const key = monthKey(selectedMonth);
+                return data.transactions.filter(item => item.date.slice(0, 7) === key);
+            }
+
+            function render() {
+                document.getElementById("monthLabel").textContent = monthFormatter.format(selectedMonth);
+                const transactions = visibleTransactions();
+                const income = transactions.filter(item => item.type === "income").reduce((sum, item) => sum + item.amount, 0);
+                const expenses = transactions.filter(item => item.type === "expense").reduce((sum, item) => sum + item.amount, 0);
+                document.getElementById("balanceAmount").innerHTML = formatter.format(income - expenses) + " <small>" + currencyUnit() + "</small>";
+                document.getElementById("incomeAmount").innerHTML = formatter.format(income) + " <small>" + currencyUnit() + "</small>";
+                document.getElementById("expenseAmount").innerHTML = formatter.format(expenses) + " <small>" + currencyUnit() + "</small>";
+
+                const budget = Number(data.budgets[monthKey(selectedMonth)]) || 0;
+                const spent = expenses;
+                const percentage = budget > 0 ? spent / budget * 100 : 0;
+                const bar = document.getElementById("budgetBar");
+                bar.style.width = Math.min(percentage, 100) + "%";
+                bar.className = percentage >= 100 ? "over" : percentage >= 80 ? "warning" : "";
+                const progress = bar.parentElement;
+                progress.setAttribute("aria-valuenow", String(Math.round(Math.min(percentage, 100))));
+                document.getElementById("budgetSpent").textContent = formatMoney(spent);
+                document.getElementById("budgetTotal").textContent = budget ? formatMoney(budget) : t("budgetNotSet");
+                document.getElementById("editBudget").textContent = t(budget ? "budgetChange" : "budgetSet");
+                const remaining = budget - spent;
+                document.getElementById("budgetCaption").textContent = budget
+                    ? t("budgetUsed", { percent: Math.round(percentage) })
+                    : t("budgetDefault");
+                document.getElementById("budgetRemaining").textContent = budget
+                    ? t(remaining >= 0 ? "budgetRemaining" : "budgetOver", { amount: formatMoney(Math.abs(remaining)) })
+                    : t("startBudget");
+                renderMoneyTip(transactions, income, expenses, budget, percentage);
+
+                const filtered = transactions
+                    .filter(item => filterType === "all" || item.type === filterType)
+                    .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+                document.getElementById("transactionCount").textContent = t(transactions.length === 1 ? "transactionCountOne" : "transactionCountMany", { count: transactions.length });
+                const list = document.getElementById("transactionList");
+                list.replaceChildren();
+                if (filtered.length === 0) {
+                    const empty = document.createElement("div");
+                    empty.className = "empty-state";
+                    empty.innerHTML = '<span aria-hidden="true">🧾</span>';
+                    empty.append(document.createTextNode(t(transactions.length ? "emptyFilter" : "emptyTransactions")));
+                    list.append(empty);
+                } else {
+                    filtered.forEach(item => list.append(createTransactionRow(item)));
+                }
+                renderCategories(transactions);
+                renderGoals();
+                renderDailyChallenge();
+                renderTrendChart();
+            }
+
+            function renderMoneyTip(transactions, income, expenses, budget, percentage) {
+                let tip;
+                if (transactions.length === 0) {
+                    tip = t("moneyTipStart");
+                } else if (budget > 0 && percentage >= 100) {
+                    tip = t("moneyTipOverBudget");
+                } else if (budget > 0 && percentage >= 80) {
+                    tip = t("moneyTipNearBudget", { percent: Math.round(percentage) });
+                } else if (income > 0 && expenses > income) {
+                    tip = t("moneyTipBalance");
+                } else if (budget === 0) {
+                    tip = t("moneyTipSetBudget");
+                } else if (expenses > 0) {
+                    const categoryTotals = new Map();
+                    transactions.filter(item => item.type === "expense").forEach(item => {
+                        categoryTotals.set(item.category, (categoryTotals.get(item.category) || 0) + item.amount);
+                    });
+                    const [category, amount] = [...categoryTotals.entries()].sort((a, b) => b[1] - a[1])[0];
+                    tip = t("moneyTipCategory", {
+                        category: t(categoryKeys[category] || "categoryOther"),
+                        percent: Math.round(amount / expenses * 100)
+                    });
+                } else {
+                    tip = t("moneyTipSave");
+                }
+                document.getElementById("moneyTipText").textContent = tip;
+            }
+
+            function renderDailyChallenge() {
+                const today = localDateValue(new Date());
+                const amounts = [5, 10, 20, 50];
+                const day = Number(today.slice(-2));
+                const amount = amounts[day % amounts.length];
+                const completed = new Set(data.dailyChallenges);
+                document.getElementById("dailyChallengeAmount").textContent = formatter.format(amount);
+                document.getElementById("dailyChallengeCurrency").textContent = currencyUnit();
+                document.getElementById("dailyChallengeStreak").textContent = t("dailyChallengeStreak", { count: getChallengeStreak(completed, today) });
+                const button = document.getElementById("completeDailyChallenge");
+                button.disabled = completed.has(today);
+                button.textContent = t(completed.has(today) ? "dailyChallengeDone" : "dailyChallengeButton");
+            }
+
+            function getChallengeStreak(completed, today) {
+                const date = new Date();
+                if (!completed.has(today)) date.setDate(date.getDate() - 1);
+                let streak = 0;
+                while (streak < 365 && completed.has(localDateValue(date))) {
+                    streak++;
+                    date.setDate(date.getDate() - 1);
+                }
+                return streak;
+            }
+
+            function renderGoals() {
+                const container = document.getElementById("goalList");
+                container.replaceChildren();
+                document.getElementById("goalEmpty").hidden = data.goals.length > 0;
+                data.goals.forEach(goal => {
+                    const item = document.createElement("article");
+                    item.className = "goal-item";
+                    const heading = document.createElement("div");
+                    heading.className = "goal-heading";
+                    const name = document.createElement("h3");
+                    name.className = "goal-name";
+                    name.textContent = goal.name;
+                    const percent = Math.min(100, Math.round(goal.saved / goal.target * 100));
+                    const status = document.createElement("span");
+                    status.className = "transaction-meta";
+                    status.textContent = percent >= 100 ? t("goalCompleted") : t("goalProgress") + ": " + percent + "%";
+                    heading.append(name, status);
+
+                    const details = document.createElement("div");
+                    details.className = "goal-details";
+                    const saved = document.createElement("span");
+                    saved.textContent = formatMoney(goal.saved);
+                    const target = document.createElement("span");
+                    target.textContent = formatMoney(goal.target);
+                    details.append(saved, target);
+
+                    const track = document.createElement("div");
+                    track.className = "goal-track";
+                    track.setAttribute("role", "progressbar");
+                    track.setAttribute("aria-label", goal.name + " — " + t("goalProgress"));
+                    track.setAttribute("aria-valuemin", "0");
+                    track.setAttribute("aria-valuemax", "100");
+                    track.setAttribute("aria-valuenow", String(percent));
+                    const fill = document.createElement("span");
+                    fill.style.width = percent + "%";
+                    track.append(fill);
+
+                    const actions = document.createElement("div");
+                    actions.className = "goal-actions";
+                    if (goal.saved < goal.target) {
+                        const contribute = document.createElement("button");
+                        contribute.className = "text-button";
+                        contribute.type = "button";
+                        contribute.textContent = t("addContribution");
+                        contribute.addEventListener("click", () => openContribution(goal));
+                        actions.append(contribute);
+                    }
+                    const remove = document.createElement("button");
+                    remove.className = "goal-delete";
+                    remove.type = "button";
+                    remove.textContent = t("deleteGoal");
+                    remove.addEventListener("click", () => deleteGoal(goal.id));
+                    actions.append(remove);
+                    item.append(heading, details, track, actions);
+                    container.append(item);
+                });
+            }
+
+            function openContribution(goal) {
+                document.getElementById("contributionGoalName").textContent = goal.name + " — " + t("budgetRemaining", { amount: formatMoney(goal.target - goal.saved) });
+                document.getElementById("contributionAmount").value = "";
+                document.getElementById("contributionForm").dataset.goalId = goal.id;
+                openModal("contributionModal");
+                playUiSound("open");
+            }
+
+            function deleteGoal(id) {
+                const previousGoals = data.goals;
+                data.goals = data.goals.filter(goal => goal.id !== id);
+                if (saveData()) {
+                    renderGoals();
+                    showToast(t("goalDeleted"));
+                    playUiSound("remove");
+                } else {
+                    data.goals = previousGoals;
+                }
+            }
+
+            function collectBudgetAlerts(key, previousPercentage, currentPercentage) {
+                const triggered = [];
+                [80, 100].forEach(threshold => {
+                    const alertKey = key + ":" + threshold;
+                    if (previousPercentage < threshold && currentPercentage >= threshold && !data.budgetAlerts.includes(alertKey)) {
+                        data.budgetAlerts.push(alertKey);
+                        triggered.push(threshold);
+                    }
+                });
+                return triggered;
+            }
+
+            function renderTrendChart() {
+                const svg = document.getElementById("trendChart");
+                const namespace = "http://www.w3.org/2000/svg";
+                const months = Array.from({ length: 6 }, (_, index) =>
+                    new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() - 5 + index, 1)
+                );
+                const locale = language === "ar" ? "ar-MA" : language === "fr" ? "fr-MA" : "en-US";
+                const monthLabel = new Intl.DateTimeFormat(locale, { month: "short" });
+                const values = months.map(month => {
+                    const key = monthKey(month);
+                    const monthTransactions = data.transactions.filter(item => item.date.slice(0, 7) === key);
+                    return {
+                        month,
+                        income: monthTransactions.filter(item => item.type === "income").reduce((sum, item) => sum + item.amount, 0),
+                        expenses: monthTransactions.filter(item => item.type === "expense").reduce((sum, item) => sum + item.amount, 0)
+                    };
+                });
+                const highest = Math.max(0, ...values.flatMap(item => [item.income, item.expenses]));
+                const step = highest > 0 ? Math.pow(10, Math.floor(Math.log10(highest))) * ([1, 2, 5, 10].find(multiplier => multiplier * Math.pow(10, Math.floor(Math.log10(highest))) >= highest) || 10) : 1;
+                const maxValue = highest > 0 ? step : 1;
+                const left = 70;
+                const right = 704;
+                const top = 18;
+                const bottom = 202;
+                const xFor = index => left + index * (right - left) / (values.length - 1);
+                const yFor = value => bottom - value / maxValue * (bottom - top);
+                const createSvgElement = (tag, attributes, text) => {
+                    const element = document.createElementNS(namespace, tag);
+                    Object.entries(attributes || {}).forEach(([name, value]) => element.setAttribute(name, String(value)));
+                    if (text !== undefined) element.textContent = text;
+                    return element;
+                };
+                svg.replaceChildren();
+
+                const tickValues = highest > 0 ? [0, 1, 2, 3, 4].map(tick => maxValue * tick / 4) : [0];
+                tickValues.forEach(value => {
+                    const y = highest > 0 ? yFor(value) : bottom;
+                    svg.append(
+                        createSvgElement("line", { x1: left, x2: right, y1: y, y2: y, class: "trend-grid" }),
+                        createSvgElement("text", { x: left - 10, y: y + 4, "text-anchor": "end", class: "trend-axis-label" }, formatter.format(value))
+                    );
+                });
+                values.forEach((item, index) => {
+                    svg.append(createSvgElement("text", {
+                        x: xFor(index), y: 232, "text-anchor": "middle", class: "trend-month-label"
+                    }, monthLabel.format(item.month)));
+                });
+
+                [["expenses", "trendExpenses"], ["income", "trendIncome"]].forEach(([key, labelKey]) => {
+                    const points = values.map((item, index) => ({ x: xFor(index), y: yFor(item[key]), value: item[key], month: item.month }));
+                    const path = points.map((point, index) => (index ? "L" : "M") + point.x + " " + point.y).join(" ");
+                    svg.append(createSvgElement("path", { d: path, class: "trend-line " + key }));
+                    points.forEach(point => {
+                        const circle = createSvgElement("circle", {
+                            cx: point.x, cy: point.y, r: 4, class: "trend-point " + key
+                        });
+                        circle.append(createSvgElement("title", {}, t(labelKey) + " · " + monthFormatter.format(point.month) + ": " + formatMoney(point.value)));
+                        svg.append(circle);
+                    });
+                });
+                document.getElementById("trendEmpty").hidden = highest > 0;
+            }
+
+            function createTransactionRow(item) {
+                const row = document.createElement("article");
+                row.className = "transaction";
+                const icon = document.createElement("div");
+                icon.className = "transaction-icon";
+                icon.textContent = categories[item.category] || categories["أخرى"];
+                icon.setAttribute("aria-hidden", "true");
+                const details = document.createElement("div");
+                const title = document.createElement("p");
+                title.className = "transaction-title";
+                title.textContent = item.description;
+                const meta = document.createElement("p");
+                meta.className = "transaction-meta";
+                const locale = language === "ar" ? "ar-MA" : language === "fr" ? "fr-MA" : "en-US";
+                meta.textContent = t(categoryKeys[item.category] || "categoryOther") + " · " + new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(new Date(item.date + "T12:00:00"));
+                details.append(title, meta);
+                const amount = document.createElement("span");
+                amount.className = "transaction-amount" + (item.type === "income" ? " income" : "");
+                amount.textContent = (item.type === "income" ? "+ " : "− ") + formatMoney(item.amount);
+                const remove = document.createElement("button");
+                remove.className = "delete-button";
+                remove.type = "button";
+                remove.textContent = "×";
+                remove.setAttribute("aria-label", t("deleteTransaction", { description: item.description }));
+                remove.addEventListener("click", () => deleteTransaction(item.id));
+                row.append(icon, details, amount, remove);
+                return row;
+            }
+
+            function renderCategories(transactions) {
+                const totals = {};
+                transactions.filter(item => item.type === "expense").forEach(item => {
+                    totals[item.category] = (totals[item.category] || 0) + item.amount;
+                });
+                const sorted = Object.entries(totals).sort((a, b) => b[1] - a[1]);
+                const container = document.getElementById("categoryList");
+                container.replaceChildren();
+                if (!sorted.length) {
+                    const empty = document.createElement("div");
+                    empty.className = "category-empty";
+                    empty.textContent = t("emptyCategories");
+                    container.append(empty);
+                    return;
+                }
+                const largest = sorted[0][1];
+                sorted.forEach(([category, total]) => {
+                    const row = document.createElement("div");
+                    row.className = "category-row";
+                    const label = document.createElement("div");
+                    label.className = "category-label";
+                    const name = document.createElement("span");
+                    name.textContent = (categories[category] || categories["أخرى"]) + "  " + t(categoryKeys[category] || "categoryOther");
+                    const amount = document.createElement("span");
+                    amount.textContent = formatMoney(total);
+                    label.append(name, amount);
+                    const track = document.createElement("div");
+                    track.className = "category-track";
+                    const fill = document.createElement("span");
+                    fill.style.width = (total / largest * 100) + "%";
+                    track.append(fill);
+                    row.append(label, track);
+                    container.append(row);
+                });
+            }
+
+            function openModal(id) {
+                const modal = document.getElementById(id);
+                modal.hidden = false;
+                modal.classList.add("open");
+                const firstInput = modal.querySelector("input:not([type=hidden])");
+                if (firstInput) firstInput.focus();
+            }
+
+            function closeModal(id) {
+                const modal = document.getElementById(id);
+                modal.classList.remove("open");
+                modal.hidden = true;
+            }
+
+            let toastTimer;
+            function showToast(message) {
+                const current = document.querySelector(".toast");
+                if (current) current.remove();
+                const toast = document.createElement("div");
+                toast.className = "toast";
+                toast.setAttribute("role", "status");
+                toast.textContent = message;
+                document.body.append(toast);
+                clearTimeout(toastTimer);
+                toastTimer = setTimeout(() => toast.remove(), 2800);
+            }
+
+            function deleteTransaction(id) {
+                data.transactions = data.transactions.filter(item => item.id !== id);
+                if (saveData()) {
+                    render();
+                    playUiSound("remove");
+                }
+            }
+
+            document.getElementById("openTransaction").addEventListener("click", () => {
+                document.getElementById("date").value = localDateValue(new Date());
+                openModal("transactionModal");
+                playUiSound("open");
+            });
+            document.getElementById("editBudget").addEventListener("click", () => {
+                document.getElementById("budgetInput").value = data.budgets[monthKey(selectedMonth)] || "";
+                openModal("budgetModal");
+                playUiSound("open");
+            });
+            document.getElementById("addGoal").addEventListener("click", () => {
+                document.getElementById("goalForm").reset();
+                openModal("goalModal");
+                playUiSound("open");
+            });
+            document.getElementById("completeDailyChallenge").addEventListener("click", () => {
+                const today = localDateValue(new Date());
+                if (data.dailyChallenges.includes(today)) return;
+                const previousChallenges = data.dailyChallenges;
+                data.dailyChallenges = [...new Set([...previousChallenges, today])].sort().slice(-365);
+                if (saveData()) {
+                    renderDailyChallenge();
+                    showToast(t("dailyChallengeDone"));
+                    playUiSound("success");
+                } else {
+                    data.dailyChallenges = previousChallenges;
+                }
+            });
+            document.getElementById("goalForm").addEventListener("submit", event => {
+                event.preventDefault();
+                const name = document.getElementById("goalName").value.trim();
+                const target = Number(document.getElementById("goalTarget").value);
+                if (!name || !Number.isFinite(target) || target <= 0 || target > 999999999) {
+                    showToast(t("goalInvalid"));
+                    return;
+                }
+                const goal = {
+                    id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+                    name,
+                    target: Math.round(target * 100) / 100,
+                    saved: 0
+                };
+                data.goals.push(goal);
+                if (saveData()) {
+                    closeModal("goalModal");
+                    renderGoals();
+                    showToast(t("goalSaved"));
+                    playUiSound("success");
+                } else {
+                    data.goals = data.goals.filter(item => item.id !== goal.id);
+                }
+            });
+            document.getElementById("contributionForm").addEventListener("submit", event => {
+                event.preventDefault();
+                const goal = data.goals.find(item => item.id === event.currentTarget.dataset.goalId);
+                const amount = Number(document.getElementById("contributionAmount").value);
+                if (!goal || !Number.isFinite(amount) || amount <= 0 || amount > 999999999) {
+                    showToast(t("contributionInvalid"));
+                    return;
+                }
+                const contribution = Math.round(amount * 100) / 100;
+                const remaining = Math.round((goal.target - goal.saved) * 100) / 100;
+                if (contribution > remaining) {
+                    showToast(t("contributionTooHigh"));
+                    return;
+                }
+                const previous = goal.saved;
+                goal.saved = Math.round((goal.saved + contribution) * 100) / 100;
+                if (saveData()) {
+                    closeModal("contributionModal");
+                    renderGoals();
+                    showToast(t(goal.saved === goal.target ? "goalCompleted" : "contributionSaved"));
+                    playUiSound("success");
+                } else {
+                    goal.saved = previous;
+                }
+            });
+            document.getElementById("openSettings").addEventListener("click", () => {
+                openModal("settingsModal");
+                playUiSound("open");
+            });
+            document.getElementById("languageSelect").addEventListener("change", event => {
+                const previous = language;
+                language = event.target.value;
+                settings.language = language;
+                if (!saveSettings()) {
+                    language = previous;
+                    settings.language = previous;
+                    event.target.value = previous;
+                } else {
+                    applyLanguage();
+                    showToast(t("languageSaved"));
+                }
+            });
+            document.getElementById("soundToggle").addEventListener("change", event => {
+                const previous = settings.sounds;
+                settings.sounds = event.target.checked;
+                if (!saveSettings()) {
+                    settings.sounds = previous;
+                    event.target.checked = previous;
+                } else {
+                    showToast(t("soundSaved"));
+                }
+            });
+            document.getElementById("testSound").addEventListener("click", () => playUiSound("test", true));
+            document.querySelectorAll("[data-close]").forEach(button => {
+                button.addEventListener("click", () => {
+                    closeModal(button.dataset.close);
+                    playUiSound("close");
+                });
+            });
+            document.querySelectorAll(".modal-backdrop").forEach(backdrop => {
+                backdrop.addEventListener("click", event => {
+                    if (event.target === backdrop) closeModal(backdrop.id);
+                });
+            });
+            document.addEventListener("keydown", event => {
+                if (event.key === "Escape") document.querySelectorAll(".modal-backdrop.open").forEach(modal => closeModal(modal.id));
+            });
+            document.querySelectorAll(".type-switch button").forEach(button => {
+                button.addEventListener("click", () => {
+                    document.querySelectorAll(".type-switch button").forEach(item => item.classList.toggle("active", item === button));
+                    document.getElementById("transactionType").value = button.dataset.type;
+                    const expense = button.dataset.type === "expense";
+                    document.getElementById("categoryField").hidden = !expense;
+                    document.getElementById("category").required = expense;
+                });
+            });
+            document.getElementById("transactionForm").addEventListener("submit", event => {
+                event.preventDefault();
+                const type = document.getElementById("transactionType").value;
+                const amount = Number(document.getElementById("amount").value);
+                const description = document.getElementById("description").value.trim();
+                const date = document.getElementById("date").value;
+                if (!description || !Number.isFinite(amount) || amount <= 0 || amount > 999999999 || !date) {
+                    showToast(t("transactionInvalid"));
+                    return;
+                }
+                const transaction = {
+                    id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+                    type,
+                    description,
+                    amount: Math.round(amount * 100) / 100,
+                    category: type === "income" ? "الدخل" : document.getElementById("category").value,
+                    date
+                };
+                const alertKey = date.slice(0, 7);
+                const previousAlerts = data.budgetAlerts.slice();
+                let triggeredBudgetAlerts = [];
+                if (type === "expense") {
+                    const oldSpent = data.transactions
+                        .filter(item => item.type === "expense" && item.date.slice(0, 7) === alertKey)
+                        .reduce((sum, item) => sum + item.amount, 0);
+                    const budget = Number(data.budgets[alertKey]) || 0;
+                    if (budget > 0) {
+                        triggeredBudgetAlerts = collectBudgetAlerts(alertKey, oldSpent / budget * 100, (oldSpent + transaction.amount) / budget * 100);
+                    }
+                }
+                data.transactions.push(transaction);
+                if (saveData()) {
+                    event.target.reset();
+                    document.getElementById("transactionType").value = "expense";
+                    document.querySelectorAll(".type-switch button").forEach(item => item.classList.toggle("active", item.dataset.type === "expense"));
+                    document.getElementById("categoryField").hidden = false;
+                    document.getElementById("category").required = true;
+                    closeModal("transactionModal");
+                    render();
+                    showToast(triggeredBudgetAlerts.length
+                        ? t(triggeredBudgetAlerts[triggeredBudgetAlerts.length - 1] >= 100 ? "budgetExceededAlert" : "budgetWarning")
+                        : t("transactionSaved"));
+                    playUiSound("success");
+                } else {
+                    data.transactions = data.transactions.filter(item => item.id !== transaction.id);
+                    data.budgetAlerts = previousAlerts;
+                }
+            });
+            document.getElementById("budgetForm").addEventListener("submit", event => {
+                event.preventDefault();
+                const amount = Number(document.getElementById("budgetInput").value);
+                if (!Number.isFinite(amount) || amount <= 0 || amount > 999999999) {
+                    showToast(t("budgetInvalid"));
+                    return;
+                }
+                const key = monthKey(selectedMonth);
+                const previous = data.budgets[key];
+                const previousAlerts = data.budgetAlerts.slice();
+                const spent = data.transactions
+                    .filter(item => item.type === "expense" && item.date.slice(0, 7) === key)
+                    .reduce((sum, item) => sum + item.amount, 0);
+                const previousPercentage = previous > 0 ? spent / previous * 100 : 0;
+                data.budgets[key] = Math.round(amount * 100) / 100;
+                const triggeredBudgetAlerts = collectBudgetAlerts(key, previousPercentage, spent / data.budgets[key] * 100);
+                if (saveData()) {
+                    closeModal("budgetModal");
+                    render();
+                    showToast(triggeredBudgetAlerts.length
+                        ? t(triggeredBudgetAlerts[triggeredBudgetAlerts.length - 1] >= 100 ? "budgetExceededAlert" : "budgetWarning")
+                        : t("budgetSaved"));
+                    playUiSound("success");
+                } else if (previous === undefined) {
+                    delete data.budgets[key];
+                    data.budgetAlerts = previousAlerts;
+                } else {
+                    data.budgets[key] = previous;
+                    data.budgetAlerts = previousAlerts;
+                }
+            });
+            document.getElementById("typeFilter").addEventListener("change", event => {
+                filterType = event.target.value;
+                render();
+            });
+            document.getElementById("previousMonth").addEventListener("click", () => {
+                selectedMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() - 1, 1);
+                render();
+                playUiSound("navigate");
+            });
+            document.getElementById("nextMonth").addEventListener("click", () => {
+                selectedMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 1);
+                render();
+                playUiSound("navigate");
+            });
+
+            document.getElementById("startExperience").addEventListener("click", () => {
+                if (settings.sounds) playWelcomeSound();
+                document.getElementById("welcomePanel").hidden = true;
+                document.getElementById("loginForm").hidden = false;
+                document.getElementById("loginEmail").focus();
+            });
+            document.getElementById("loginForm").addEventListener("submit", event => {
+                event.preventDefault();
+                document.getElementById("loginFeedback").hidden = false;
+            });
+            document.getElementById("togglePassword").addEventListener("click", event => {
+                const password = document.getElementById("loginPassword");
+                password.type = password.type === "password" ? "text" : "password";
+                const visibilityKey = password.type === "password" ? "showPassword" : "hidePassword";
+                event.currentTarget.textContent = t(visibilityKey);
+                event.currentTarget.setAttribute("aria-label", t(visibilityKey));
+            });
+            document.getElementById("continueAsGuest").addEventListener("click", finishIntro);
+            document.getElementById("backToWelcome").addEventListener("click", () => {
+                document.getElementById("loginForm").hidden = true;
+                document.getElementById("welcomePanel").hidden = false;
+                document.getElementById("startExperience").focus();
+            });
+            applyLanguage();
+            if ("serviceWorker" in navigator && /^https?:$/.test(window.location.protocol)) {
+                navigator.serviceWorker.register("./sw.js").catch(error => {
+                    console.error("تعذر تفعيل العمل دون اتصال:", error);
+                });
+            }
+        })();
+    </script>
+</body>
+</html>
